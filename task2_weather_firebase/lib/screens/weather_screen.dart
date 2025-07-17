@@ -3,7 +3,8 @@ import '../services/weather_service.dart';
 import '../services/firestore_service.dart';
 import 'saved_cities_screen.dart';
 import '../services/auth_service.dart';
-import 'login_screen.dart';  // Import LoginScreen here
+import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,16 +16,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final WeatherService _weatherService = WeatherService();
   final FirestoreService _firestoreService = FirestoreService();
-  final TextEditingController _controller = TextEditingController(text: "");
+  final TextEditingController _controller = TextEditingController();
 
   Map<String, dynamic>? _weatherData;
   List<dynamic>? _forecastData;
-  String? _currentCity = "";
+  String? _currentCity;
   bool _isLoading = false;
+  bool _signingOut = false;
+
+  User? _user;
 
   @override
   void initState() {
     super.initState();
+    _user = AuthService.currentUser;
     _firestoreService.getCities().listen((cities) {
       setState(() {});
     });
@@ -48,13 +53,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print("Error: $e");
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("❌ Failed to load weather. Check city or internet.")),
-        );
-      }
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("❌ Failed to load weather. Check city or internet.")),
+      );
     }
   }
 
@@ -67,36 +69,59 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color.fromARGB(255, 0, 0, 0);
+    final primaryColor = Colors.black;
     final backgroundColor = Colors.grey[100];
     final cardColor = Colors.white;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text("🌤 Weather App"),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await AuthService.signOut();
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-          ),
-        ],
+        title: Row(
+          children: [
+            const Text("🌤 Weather App"),
+            const Spacer(),
+            if (_user != null)
+              Text(
+                _user!.displayName ?? _user!.email ?? "User",
+                style: const TextStyle(fontSize: 14, color: Colors.white),
+              ),
+            const SizedBox(width: 8),
+            _signingOut
+                ? const Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.logout),
+                    onPressed: () async {
+                      setState(() => _signingOut = true);
+                      await AuthService.signOut();
+                      if (!mounted) return;
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    },
+                  ),
+          ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // 🔍 Search Field
+              // Search Field
               Container(
                 decoration: BoxDecoration(
                   color: cardColor,
@@ -121,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 💾 Save & View Saved Buttons
+              // Save and View Saved buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -131,14 +156,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor, foregroundColor: Colors.white),
                     onPressed: () async {
-                      await _firestoreService.addCity(_currentCity!);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("✅ City saved!"),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
+                      if (_currentCity?.isNotEmpty ?? false) {
+                        await _firestoreService.addCity(_currentCity!);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("✅ City saved!"),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       }
                     },
                   ),
@@ -169,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 24),
 
-              // 🔄 Loading Indicator or Current Weather
+              // Weather card or loader
               if (_isLoading)
                 const CircularProgressIndicator()
               else if (_weatherData != null)
@@ -197,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 24),
 
-              // ⛅ Forecast Cards
+              // Forecast cards
               if (_forecastData != null)
                 SizedBox(
                   height: 160,
@@ -211,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final temp = item['main']['temp'];
                           final desc = item['weather'][0]['description'];
                           return Card(
-                            color: Colors.white,
+                            color: Colors.black,
                             elevation: 3,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -221,11 +248,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(date, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(date, style: const TextStyle(fontWeight: FontWeight.bold,color: Colors.white)),
                                   const SizedBox(height: 8),
-                                  Text("$temp°C", style: const TextStyle(fontSize: 16)),
+                                  Text("$temp°C", style: const TextStyle(fontSize: 16, color: Colors.white)),
                                   const SizedBox(height: 4),
-                                  Text(desc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+                                  Text(desc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12,color: Colors.white)),
                                 ],
                               ),
                             ),
@@ -238,8 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
-      // 🔁 Refresh FAB
       floatingActionButton: _controller.text.isEmpty
           ? null
           : FloatingActionButton(
