@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
 class FirestoreScreen extends StatelessWidget {
   const FirestoreScreen({super.key});
@@ -47,11 +50,29 @@ class FirestoreScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Firestore CRUD")),
+      appBar: AppBar(
+        title: const Text("Firestore CRUD"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: "Sign Out",
+            onPressed: () async {
+              await AuthService.signOut();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+          )
+        ],
+      ),
       body: StreamBuilder(
         stream: service.getUsers(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const CircularProgressIndicator();
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
           final docs = snapshot.data!.docs;
 
           return ListView(
@@ -60,7 +81,10 @@ class FirestoreScreen extends StatelessWidget {
               return ListTile(
                 title: Text(data['name']),
                 subtitle: Text("Age: ${data['age']}"),
-                trailing: IconButton(icon: const Icon(Icons.delete), onPressed: () => service.deleteUser(doc.id)),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => service.deleteUser(doc.id),
+                ),
                 onTap: () => showForm(id: doc.id, name: data['name'], age: data['age']),
               );
             }).toList(),

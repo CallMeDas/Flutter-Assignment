@@ -1,12 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+// import 'dart:io' show Platform;
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<User?> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+  static Future<User?> signInWithGoogle() async {
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
     if (googleUser == null) return null;
 
     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
@@ -20,10 +20,21 @@ class AuthService {
     return userCredential.user;
   }
 
-  Future<void> signOut() async {
+  static Future<void> signOut() async {
+    // Sign out from Firebase
     await _auth.signOut();
-    await _googleSignIn.signOut();
+
+    // Try Google Sign-Out ONLY on platforms that support it
+    try {
+      final googleSignIn = GoogleSignIn();
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.disconnect(); // Optional: Clears the account
+        await googleSignIn.signOut();    // Required: Logs out from Google
+      }
+    } catch (e) {
+      print("⚠️ Google Sign-Out failed: $e");
+    }
   }
 
-  Stream<User?> get userChanges => _auth.userChanges();
+  static User? get currentUser => _auth.currentUser;
 }
