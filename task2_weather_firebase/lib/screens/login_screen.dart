@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: const Icon(Icons.logout, color: Colors.white),
                       label: const Text('Sign out', style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent.withOpacity(0.7),
+                        backgroundColor: Colors.redAccent,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),

@@ -1,99 +1,64 @@
 import 'package:flutter/material.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
-import '../services/auth_service.dart';
-import 'login_screen.dart';
 
-class FirestoreScreen extends StatelessWidget {
+class FirestoreScreen extends StatefulWidget {
   const FirestoreScreen({super.key});
 
   @override
+  State<FirestoreScreen> createState() => _FirestoreScreenState();
+}
+
+class _FirestoreScreenState extends State<FirestoreScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  late Stream<List<String>> _citiesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _citiesStream = _firestoreService.getCities();
+  }
+
+  Future<void> _deleteCity(String city) async {
+    await _firestoreService.deleteCity(city);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("🗑️ Deleted $city")),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final ageCtrl = TextEditingController();
-    final service = FirestoreService();
-
-    void showForm({String? id, String? name, int? age}) {
-      nameCtrl.text = name ?? '';
-      ageCtrl.text = age?.toString() ?? '';
-
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: Text(id == null ? "Add User" : "Edit User"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-              TextField(controller: ageCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Age')),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text;
-                final age = int.tryParse(ageCtrl.text) ?? 0;
-                if (id == null) {
-                  service.addUser(name, age);
-                } else {
-                  service.updateUser(id, name, age);
-                }
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            )
-          ],
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Firestore CRUD"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: "Sign Out",
-            onPressed: () async {
-              await AuthService.signOut();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-          )
-        ],
+        title: const Text('Saved Cities'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
       ),
-      body: StreamBuilder(
-        stream: service.getUsers(),
+      body: StreamBuilder<List<String>>(
+        stream: _citiesStream,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final docs = snapshot.data!.docs;
 
-          return ListView(
-            children: docs.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text("No saved cities."));
+          }
+
+          final cities = snapshot.data!;
+          return ListView.builder(
+            itemCount: cities.length,
+            itemBuilder: (context, index) {
+              final city = cities[index];
               return ListTile(
-                title: Text(data['name']),
-                subtitle: Text("Age: ${data['age']}"),
+                title: Text(city),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => service.deleteUser(doc.id),
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _deleteCity(city),
                 ),
-                onTap: () => showForm(id: doc.id, name: data['name'], age: data['age']),
               );
-            }).toList(),
+            },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showForm(),
-        child: const Icon(Icons.add),
       ),
     );
   }

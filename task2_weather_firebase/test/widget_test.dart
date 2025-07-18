@@ -1,30 +1,45 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:weather_firebase_app/screens/login_screen.dart';
 
-import 'package:task2_weather_firebase/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  // Ensure Firebase bindings are initialized
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  group('LoginScreen Widget Test', () {
+    testWidgets('displays title and sign in button', (WidgetTester tester) async {
+      // Build the widget
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      // Verify welcome text
+      expect(find.text('Welcome to Weather App'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      // Verify Sign in button
+      expect(find.byType(ElevatedButton), findsOneWidget);
+      expect(find.text('Sign in with Google'), findsOneWidget);
+    });
+
+    testWidgets('taps Sign in with Google button', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final signInButton = find.widgetWithText(ElevatedButton, 'Sign in with Google');
+
+      // Simulate tap
+      expect(signInButton, findsOneWidget);
+      await tester.tap(signInButton);
+      await tester.pump(); // Triggers UI updates
+
+      // Since actual sign-in is async, you could show a CircularProgressIndicator
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
   });
 }
