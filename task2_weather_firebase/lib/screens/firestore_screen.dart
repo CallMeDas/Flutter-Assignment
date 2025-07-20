@@ -5,19 +5,15 @@ class FirestoreScreen extends StatefulWidget {
   const FirestoreScreen({super.key});
 
   @override
-  State<FirestoreScreen> createState() => _FirestoreScreenState();
-}
-
+  State<FirestoreScreen> createState() => _FirestoreScreenState();}
 class _FirestoreScreenState extends State<FirestoreScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   late Stream<List<String>> _citiesStream;
-
   @override
   void initState() {
     super.initState();
     _citiesStream = _firestoreService.getCities();
   }
-
   Future<void> _deleteCity(String city) async {
     await _firestoreService.deleteCity(city);
     ScaffoldMessenger.of(context).showSnackBar(

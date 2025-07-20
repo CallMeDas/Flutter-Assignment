@@ -4,34 +4,24 @@ import 'package:flutter/foundation.dart'; // for kIsWeb
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
-
   static Future<User?> signInWithGoogle() async {
     GoogleSignIn googleSignIn;
-
     if (kIsWeb) {
-      // Use web client ID when running on web
       googleSignIn = GoogleSignIn(
         clientId: "1033929961237-5gdplqch2esaq6llnee0bhs77qhvb9ut.apps.googleusercontent.com",
       );
     } else {
-      // Use default config on mobile
       googleSignIn = GoogleSignIn();
     }
-
     final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
     if (googleUser == null) return null;
-
     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
+      idToken: googleAuth.idToken,);
     final userCredential = await _auth.signInWithCredential(credential);
     return userCredential.user;
   }
-
   static Future<void> signOut() async {
     try {
       final googleSignIn = GoogleSignIn();
@@ -42,9 +32,11 @@ class AuthService {
     } catch (e) {
       print("⚠️ Google Sign-Out failed: $e");
     }
-
     await _auth.signOut();
   }
+  static User? get currentUser => _auth.currentUser;}
 
-  static User? get currentUser => _auth.currentUser;
-}
+
+
+
+

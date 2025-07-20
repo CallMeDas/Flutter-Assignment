@@ -59,13 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // Uncomment below to use a background image
-        // decoration: BoxDecoration(
-        //   image: DecorationImage(
-        //     image: AssetImage('assets/images/bg_weather.jpg'),
-        //     fit: BoxFit.cover,
-        //   ),
-        // ),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.black, Color(0xFF222831)],
